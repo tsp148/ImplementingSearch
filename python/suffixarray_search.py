@@ -60,14 +60,6 @@ def suffix_array_find_all(s: str, sa: list[int], pattern: str) -> list[int]:
     L, R = suffix_array_find_range(s, sa, pattern)
     return [sa[i] for i in range(L, R)]
 
-def build_suffix_array(s: str):
-    # generate (suffix, index) pairs
-    suffixes = [(s[i:], i) for i in range(len(s))]
-    # sort by suffix
-    suffixes.sort(key=lambda x: x[0])
-    # return only indices
-    return [idx for _, idx in suffixes]
-
 start_time = time.time()
 
 reference = ""
@@ -84,7 +76,7 @@ while len(queries) < args.query_ct:
     queries.extend(queries[:old_count])
 queries = queries[:args.query_ct]
 
-sa = build_suffix_array(reference)
+sa = iv2py.create_suffixarray(reference)
 elapsed = time.time() - start_time
 print(f"Elapsed time for SA construction: {int(elapsed)} s")
 start_time = time.time()
@@ -98,7 +90,7 @@ for query in queries:
 
 
 elapsed = time.time() - start_time
-print(f"Elapsed time: {int(elapsed)} s")
+print(f"Elapsed time: {elapsed} s")
 
 
 # /usr/bin/time -v python suffixarray_search.py --reference ../data/hg38_partial.fasta.gz --query ../data/illumina_reads_100.fasta.gz --query_ct 1
