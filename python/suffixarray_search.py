@@ -91,8 +91,8 @@ start_time = time.time()
 for query in queries:
     occurences = []
     occurences = suffix_array_find_all(reference, sa, query)
-    print(f"Query: \n", query, f"\nfound at positions: {occurences}")
-    print("ref:", reference[occurences[0]:occurences[0]+len(query)] if occurences else "No occurrence found.")
+    # print(f"Query: \n", query, f"\nfound at positions: {occurences}")
+    # print("ref:", reference[occurences[0]:occurences[0]+len(query)] if occurences else "No occurrence found.")
 
 # print(suffix_array_find_all("banana$",  [6, 5, 3, 1, 0, 4, 2], "ana"))
 
