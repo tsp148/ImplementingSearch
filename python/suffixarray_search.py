@@ -4,6 +4,17 @@ Created on Sun Jan 18 15:54:03 2026
 
 @author: camil
 """
+import iv2py
+import argparse
+import time
+
+parser = argparse.ArgumentParser(description="Naive search for pattern occurrences in reference sequences.")
+parser.add_argument('--reference', type=str, required=True, help='Reference file (FASTA)')
+parser.add_argument('--query', type=str, required=True, help='Query file (FASTA)')
+parser.add_argument('--query_ct', type=int, default=100, help='Number of queries (will be duplicated if needed)')
+
+args = parser.parse_args()
+
 
 def suffix_array_find_range(s: str, sa: list[int], pattern: str) -> tuple[int, int]:
     n = len(sa)
@@ -49,7 +60,45 @@ def suffix_array_find_all(s: str, sa: list[int], pattern: str) -> list[int]:
     L, R = suffix_array_find_range(s, sa, pattern)
     return [sa[i] for i in range(L, R)]
 
+def build_suffix_array(s: str):
+    # generate (suffix, index) pairs
+    suffixes = [(s[i:], i) for i in range(len(s))]
+    # sort by suffix
+    suffixes.sort(key=lambda x: x[0])
+    # return only indices
+    return [idx for _, idx in suffixes]
 
-#print(suffix_array_find_all("banana$",  [6, 5, 3, 1, 0, 4, 2], "ana"))
+start_time = time.time()
+
+reference = ""
+for record in iv2py.fasta.reader(file=args.reference): #"../data/hg38_partial.fasta.gz"
+    reference = str(record.seq)
+
+queries = []
+for record in iv2py.fasta.reader(file=args.query):
+    queries.append(str(record.seq))
+
+# Extend queries if needed
+while len(queries) < args.query_ct:
+    old_count = len(queries)
+    queries.extend(queries[:old_count])
+queries = queries[:args.query_ct]
+
+sa = build_suffix_array(reference)
+elapsed = time.time() - start_time
+print(f"Elapsed time for SA construction: {int(elapsed)} s")
+start_time = time.time()
+for query in queries:
+    occurences = []
+    occurences = suffix_array_find_all(reference, sa, query)
+    print(f"Query: \n", query, f"\nfound at positions: {occurences}")
+    print("ref:", reference[occurences[0]:occurences[0]+len(query)] if occurences else "No occurrence found.")
+
+# print(suffix_array_find_all("banana$",  [6, 5, 3, 1, 0, 4, 2], "ana"))
 
 
+elapsed = time.time() - start_time
+print(f"Elapsed time: {int(elapsed)} s")
+
+
+# /usr/bin/time -v python suffixarray_search.py --reference ../data/hg38_partial.fasta.gz --query ../data/illumina_reads_100.fasta.gz --query_ct 1
