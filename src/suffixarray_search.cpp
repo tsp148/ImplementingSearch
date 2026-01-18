@@ -2,6 +2,9 @@
 #include <sstream>
 #include <iostream>
 #include <chrono>
+#include <vector>
+#include <algorithm>
+#include <string>
 
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/argument_parser/all.hpp>
@@ -9,6 +12,138 @@
 #include <seqan3/io/sequence_file/all.hpp>
 #include <seqan3/search/fm_index/fm_index.hpp>
 #include <seqan3/search/search.hpp>
+
+std::string text1;
+bool rb_check;
+
+struct functor
+{   
+    bool operator()(const uint32_t a, const uint32_t b)const{
+    //Abfrage welches Suffix größer ist --> Anzahl Vergleiche = Anzahl Buchstaben des kürzeren Suffixes
+    uint32_t j = text1.size()-std::max(a,b); // a ist größerer Index also ist das dazugehörige Suffix weiter hinten im text und damit kürzer
+
+    j = text1.size()-std::max(a,b);
+
+    for (uint32_t i = 0; ((text1[a+i] <= text1[b+i]) && (j>0) && a>b) || text1[a+i] < text1[b+i]; ++i){
+        if (text1[a+i] < text1[b+i])
+            return true;
+        --j;
+    }
+    if (j==0) return true;
+    return false;
+    }
+}sort_suffix_indices;
+
+void construct(std::vector<saidx_t>& sa, const std::string& t){
+    sa.clear();
+    if(!t.empty()){
+    text1 = t;
+    for (uint32_t i = 0; i < t.size(); ++i){
+        sa.push_back(i);
+    }
+    sort(sa.begin(), sa.end(), sort_suffix_indices);
+    }
+}
+
+bool is_smaller (const std::string& pat, const uint32_t sa_value, const bool b, const uint32_t mlr){
+    uint32_t j = std::min(pat.size(), text1.size()-sa_value) - mlr;
+    //std::cout << "Startindex: " << start_index << "\n";
+    for (uint32_t i = mlr; (pat[i] <= text1[sa_value+i]) && (j > 0) ; ++i){
+        if (pat[i] < text1[sa_value+i]){
+            return true;
+        }
+        else 
+            j--;
+    }
+    if (b == false && pat.size() <= text1.size()-sa_value){
+        if (j==0) 
+        return true;
+    }
+    return false;
+}
+
+uint32_t lcp_value(const std::string& pat,const uint32_t n){
+    uint32_t lcp_value = 0; // counter, der erhöht wird wenn sich die Suffixe um einen zusätzlichen Buchstaben gleichen
+    uint32_t j = std::min(pat.size(),text1.size()-n);
+
+    for (unsigned i = 0; pat[i] == text1[n+i] && j > 0; ++i){
+        lcp_value += 1;
+        --j;
+    }
+    return lcp_value;
+}
+
+uint32_t left_border (const std::string& pat, const std::vector<saidx_t>& sa){
+    
+
+    uint32_t lb, M, L, R, l, r;
+
+    if (is_smaller(pat, sa[0], false, 0) == true)
+        lb = 0;
+    else if (is_smaller(pat, sa[sa.size()-1], false, 0)!= true)
+        lb = sa.size();
+    else{
+        L = 0;
+        R = sa.size()-1;
+
+        while (R-L>1){
+            M = (L+R)/2;
+            l = lcp_value(pat, sa[L]); //lcp-Wert von Pattern und linker Grenze
+            r = lcp_value(pat, sa[R]); //lcp-Wert von Pattern und rechter Grenze
+            if (is_smaller(pat, sa[M], false, std::min(l,r)) == true)
+                R = M;
+            else 
+                L = M;
+        }
+        lb = R;
+    }
+    return lb;
+}
+
+int right_border (const std::string& pat, const std::vector<saidx_t>& sa){
+    uint32_t rb;
+    uint32_t M, L, R, l, r;
+
+    if (is_smaller(pat, sa[0], true,0) == true){
+        rb_check = true;
+        rb = 0;
+    }
+    else if (is_smaller(pat, sa[sa.size()-1], true,0) != true)
+        rb = sa.size()-1;
+    else{
+        L = 0;
+        R = sa.size()-1;
+        while (R-L>1){
+            M = (L+R)/2;
+            
+            l = lcp_value(pat, sa[L]);
+            r = lcp_value(pat, sa[R]);
+            
+            if (is_smaller(pat, sa[M], true, std::min(l,r)) == true)
+                R = M;
+            else
+                L = M;
+        }
+        rb = L;
+    }
+    return rb;
+}
+
+void find(const std::string& query, const std::vector<saidx_t>& sa, const std::string& text, std::vector<uint32_t>& hits){
+    text1 = text;
+    hits.clear();
+    if (query != " " && !query.empty() && !text.empty()){
+    uint32_t lb = left_border(query, sa);
+    uint32_t rb = right_border(query, sa);
+    if (rb_check != true)
+        if (lb <= rb){
+            for(uint32_t i = lb; i <= rb; ++i){
+            	hits.push_back(sa[i]);
+	    }    
+	    sort(hits.begin(), hits.end());
+    	}
+    }
+}
 
 // Calculates left boarder
 // auto left_border = [&](std::vector<seqan3::dna5> const & reference, const std::vector<seqan3::dna5>& query, std::vector<saidx_t> const&  suffixarray) -> size_t {
@@ -120,6 +255,9 @@ int main(int argc, char const* const* argv) {
     //     }
     // }
 
+
+    // from here
+    /*
     auto left_border = [&](std::vector<seqan3::dna5> const & reference, const std::vector<seqan3::dna5>& query) -> size_t {
         if(!std::lexicographical_compare(reference.begin()+suffixarray[0], reference.begin()+suffixarray[0]+query.size()-1, query.begin(), query.end())){
             return 0;
@@ -165,6 +303,8 @@ int main(int argc, char const* const* argv) {
             return left;
         }
     };
+    */
+    // to here
 
     // auto left_border = [&](std::vector<seqan3::dna5> const & reference, const std::vector<seqan3::dna5>& query) -> size_t {
     //     size_t left = 0, right = reference.size();
@@ -199,13 +339,17 @@ int main(int argc, char const* const* argv) {
     for (auto& q : queries) {
         //!TODO !ImplementMe apply binary search and find q  in reference using binary search on `suffixarray`
         // You can choose if you want to use binary search based on left_border
-        size_t l = left_border(reference, q);
-        size_t r = right_border(reference, q);
-        seqan3::debug_stream << "l: " << l << "\n";
-        seqan3::debug_stream << "r: " << r << "\n";
-        std::vector<size_t> occurences;
-        for (size_t i = l; i < r; ++i) {
-            occurences.push_back(suffixarray[i]);
+        hits = std::vector<uint32_t>{};
+        find(q, suffixarray, reference, hits);
+        seqan3::debug_stream << "Query" << q << "found at positions: \n" << hits << "\n";
+
+        // size_t l = left_border(reference, q);
+        // size_t r = right_border(reference, q);
+        // seqan3::debug_stream << "l: " << l << "\n";
+        // seqan3::debug_stream << "r: " << r << "\n";
+        // std::vector<size_t> occurences;
+        // for (size_t i = l; i < r; ++i) {
+        //     occurences.push_back(suffixarray[i]);
             // Prüfe, ob das Suffix wirklich mit der Query übereinstimmt (optional, falls exakte Matches gewünscht)
             // auto suf_it = reference.begin() + suffixarray[i];
             // if (std::equal(q.begin(), q.end(), suf_it, reference.end())) {
@@ -213,8 +357,8 @@ int main(int argc, char const* const* argv) {
             // }
         }
         // Optional: seqan3::debug_stream << "Query found at positions: " << occurences << "\n";
-        seqan3::debug_stream << "Query" << q << "found at positions: " << occurences << "\n";
-    }
+        // seqan3::debug_stream << "Query" << q << "found at positions: " << occurences << "\n";
+    // }
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     seqan3::debug_stream << "Elapsed time: " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << " s\n";
 
