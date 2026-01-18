@@ -8,6 +8,36 @@
 #include <seqan3/search/fm_index/fm_index.hpp>
 #include <seqan3/search/search.hpp>
 
+// Calculates left boarder
+auto left_border = [&](const std::vector<seqan3::dna5>& query) -> size_t {
+    size_t left = 0, right = reference.size();
+    while (left < right) {
+        size_t mid = left + (right - left) / 2;
+        auto suf_it = reference.begin() + suffixarray[mid];
+        if (std::lexicographical_compare(suf_it, reference.end(), query.begin(), query.end())) {
+            left = mid + 1;
+        } else {
+            right = mid;
+        }
+    }
+    return left;
+};
+
+// Calculates right boarder
+auto right_border = [&](const std::vector<seqan3::dna5>& query) -> size_t {
+    size_t left = 0, right = reference.size();
+    while (left < right) {
+        size_t mid = left + (right - left) / 2;
+        auto suf_it = reference.begin() + suffixarray[mid];
+        if (std::lexicographical_compare(query.begin(), query.end(), suf_it, reference.end())) {
+            right = mid;
+        } else {
+            left = mid + 1;
+        }
+    }
+    return left;
+};
+
 int main(int argc, char const* const* argv) {
     seqan3::argument_parser parser{"suffixarray_search", argc, argv, seqan3::update_notifications::off};
 
@@ -68,9 +98,24 @@ int main(int argc, char const* const* argv) {
     //      cast it by calling:
     //      `sauchar_t const* str = reinterpret_cast<sauchar_t const*>(reference.data());`
 
+    sauchar_t const* str = reinterpret_cast<sauchar_t const*>(reference.data());
+    divsufsort(str, suffixarray.data(), reference.size());
+
     for (auto& q : queries) {
         //!TODO !ImplementMe apply binary search and find q  in reference using binary search on `suffixarray`
         // You can choose if you want to use binary search based on "naive approach", "mlr-trick", "lcp"
+        size_t l = left_border(q);
+        size_t r = right_border(q);
+        std::vector<size_t> occurences;
+        for (size_t i = l; i < r; ++i) {
+            // Prüfe, ob das Suffix wirklich mit der Query übereinstimmt (optional, falls exakte Matches gewünscht)
+            auto suf_it = reference.begin() + suffixarray[i];
+            if (std::equal(q.begin(), q.end(), suf_it, reference.end())) {
+                occurences.push_back(suffixarray[i]);
+            }
+        }
+        // Optional: seqan3::debug_stream << "Query found at positions: " << occurences << "\n";
+        seqan3::debug_stream << "Query " << q << " found at positions: " << occurences << "\n";
     }
 
     return 0;
