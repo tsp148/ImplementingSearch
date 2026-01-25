@@ -7,9 +7,9 @@ parser.add_argument('--reference', type=str, required=True, help='Reference file
 
 args = parser.parse_args()
 
-reference = ""
+reference = []
 for record in iv2py.fasta.reader(file=args.reference): #"../data/hg38_partial.fasta.gz"
-    reference = str(record.seq)
+    reference.append(str(record.seq))
 
-index = iv2py.fmindex(reference)
+index = iv2py.fmindex(reference=reference)
 index.save("py_index.idx")
