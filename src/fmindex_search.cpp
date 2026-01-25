@@ -1,4 +1,5 @@
 #include <sstream>
+#include <chrono>
 
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/argument_parser/all.hpp>
@@ -8,6 +9,7 @@
 #include <seqan3/search/search.hpp>
 
 int main(int argc, char const* const* argv) {
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     seqan3::argument_parser parser{"fmindex_search", argc, argv, seqan3::update_notifications::off};
 
     parser.info.author = "SeqAn-Team";
@@ -64,10 +66,12 @@ int main(int argc, char const* const* argv) {
     seqan3::configuration const cfg = seqan3::search_cfg::max_error_total{seqan3::search_cfg::error_count{number_of_errors}};
     for (auto & query : queries) {
         auto results = seqan3::search(query, index, cfg);
-        // Uncomment to see the results
-        for (auto && result : results) {
-            seqan3::debug_stream << "Found at: " << result.reference_begin_position() << "\n";
-        }
+        // Uncomment to see the results and check correctness
+        // for (auto && result : results) {
+        //     seqan3::debug_stream << "Found at: " << result.reference_begin_position() << "\n";
+        // }
     }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    seqan3::debug_stream << "Search time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\n";
     return 0;
 }
