@@ -8,6 +8,7 @@
 #include <seqan3/search/search.hpp>
 
 int main(int argc, char const* const* argv) {
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     seqan3::argument_parser parser{"fmindex_pigeon_search", argc, argv, seqan3::update_notifications::off};
 
     parser.info.author = "SeqAn-Team";
@@ -109,14 +110,16 @@ int main(int argc, char const* const* argv) {
                             ++errors;
                         } 
                     }
-                    if (errors <= number_of_errors){
-                        std::cout << "Treffer in Referenz " << ref_id << " an Position " << query_start << " mit " << errors << " Fehlern\n";
-                        }
+                    // if (errors <= number_of_errors){
+                    //     std::cout << "Treffer in Referenz " << ref_id << " an Position " << query_start << " mit " << errors << " Fehlern\n";
+                    //     }
                     
                 }
             }
         }
     }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    seqan3::debug_stream << "Search time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\n";
 
     return 0;
 }
