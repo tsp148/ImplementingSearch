@@ -62,9 +62,9 @@ int main(int argc, char const* const* argv) {
     }
     queries.resize(number_of_queries); // will reduce the amount of searches
     
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    seqan3::debug_stream << "Loading time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\n";
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point end_load = std::chrono::steady_clock::now();
+    seqan3::debug_stream << "Loading time " << std::chrono::duration_cast<std::chrono::milliseconds>(end_load - begin).count() << " ms\n";
+    std::chrono::steady_clock::time_point begin_search = std::chrono::steady_clock::now();
 
     //!TODO !ImplementMe use the seqan3::search function to search
     seqan3::configuration const cfg = seqan3::search_cfg::max_error_total{seqan3::search_cfg::error_count{number_of_errors}};
@@ -76,6 +76,6 @@ int main(int argc, char const* const* argv) {
         // }
     }
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    seqan3::debug_stream << "Search time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\n";
+    seqan3::debug_stream << "Search time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin_search).count() << " ms\n";
     return 0;
 }
