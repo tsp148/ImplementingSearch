@@ -80,5 +80,43 @@ int main(int argc, char const* const* argv) {
     //              if (verify(ref, query, pos +- ....something)):
     //                  std::cout << "found something\n"
 
+    size_t parts = number_of_errors + 1;
+    for (auto const & query : queries)
+    {
+        size_t part_length = query.size() / parts;
+        for (size_t p = 0; p < parts; ++p)
+        {
+            // Teilstring bestimmen
+            auto part_start = query.begin() + p * part_length;
+            auto part_end = (p == parts - 1) ? query.end() : part_start + part_length;
+            std::vector<seqan3::dna5> query_part(part_start, part_end);
+
+            // Suche Teilstück mit 0 Fehlern
+            for (auto && result : seqan3::search(query_part, index, cfg))
+            {
+                size_t ref_id = result.reference_id();
+                size_t pos = result.reference_begin_position();
+
+                // Startposition der gesamten Query im Referenztext berechnen
+                size_t query_start = (pos > p * part_length) ? pos - p * part_length : 0;
+
+                // Überprüfen, ob Query an dieser Position mit <= number_of_errors passt
+                if (query_start + query.size() <= reference[ref_id].size())
+                {
+                    size_t errors = 0;
+                    for (size_t i = 0; i < query.size(); ++i){
+                        if (query[i] != reference[ref_id][query_start + i]){
+                            ++errors;
+                        } 
+                    }
+                    if (errors <= number_of_errors){
+                        std::cout << "Treffer in Referenz " << ref_id << " an Position " << query_start << " mit " << errors << " Fehlern\n";
+                        }
+                    
+                }
+            }
+        }
+    }
+
     return 0;
 }
